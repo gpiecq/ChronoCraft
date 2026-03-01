@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  pull_request:
+    branches: [main]
+    types: [closed]
+
+jobs:
+  release:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION=$(grep '## Version' ChronoCraft.toc | sed 's/## Version: //')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build zip
+        run: |
+          mkdir -p ChronoCraft
+          cp *.toc ChronoCraft/
+          cp *.lua ChronoCraft/
+          cp README.md ChronoCraft/
+          zip -r ChronoCraft-${{ steps.version.outputs.version }}.zip ChronoCraft/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: ChronoCraft v${{ steps.version.outputs.version }}
+          files: ChronoCraft-${{ steps.version.outputs.version }}.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

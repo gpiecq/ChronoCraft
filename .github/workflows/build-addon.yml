@@ -1,0 +1,26 @@
+name: Build Addon
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare addon folder
+        run: |
+          mkdir -p addon/ChronoCraft
+          cp *.toc addon/ChronoCraft/
+          cp *.lua addon/ChronoCraft/
+          cp README.md addon/ChronoCraft/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChronoCraft
+          path: addon/ChronoCraft

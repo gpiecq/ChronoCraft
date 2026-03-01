@@ -1,0 +1,12 @@
+## Interface: 20505
+## Title: ChronoCraft
+## Notes: Track profession cooldowns across all characters
+## Notes-frFR: Suivi des cooldowns de metiers sur tous les personnages
+## Author: ChronoCraft
+## Version: 1.0.0
+## SavedVariables: ChronoCraftDB
+
+Locales.lua
+Core.lua
+Cooldowns.lua
+UI.lua
