@@ -92,14 +92,16 @@ local function ScanSpellbook()
     local nowAbs = time()
 
     for spellID, info in pairs(TRACKED_SPELLS) do
-        local start, duration = GetSpellCooldown(spellID)
-        if start and start > 0 and duration and duration > 1.5 then
-            local remaining = (start + duration) - now
-            if remaining > 0 then
-                local expiresAt = nowAbs + remaining
-                local current = NS.db[NS.playerKey].cooldowns[info.key]
-                if not current or math.abs(current - expiresAt) > 60 then
-                    StoreCooldown(info.key, math.floor(expiresAt))
+        if IsPlayerSpell(spellID) then
+            local start, duration = GetSpellCooldown(spellID)
+            if start and start > 0 and duration and duration > 1.5 then
+                local remaining = (start + duration) - now
+                if remaining > 0 and remaining <= info.duration then
+                    local expiresAt = nowAbs + remaining
+                    local current = NS.db[NS.playerKey].cooldowns[info.key]
+                    if not current or math.abs(current - expiresAt) > 60 then
+                        StoreCooldown(info.key, math.floor(expiresAt))
+                    end
                 end
             end
         end
@@ -140,10 +142,12 @@ frame:SetScript("OnEvent", function(self, event, ...)
                     local spellID = tonumber(link:match("enchant:(%d+)"))
                     if spellID and TRACKED_SPELLS[spellID] then
                         local info = TRACKED_SPELLS[spellID]
-                        local expiresAt = nowAbs + cooldown
-                        local current = NS.db and NS.db[NS.playerKey] and NS.db[NS.playerKey].cooldowns[info.key]
-                        if not current or math.abs(current - expiresAt) > 60 then
-                            StoreCooldown(info.key, math.floor(expiresAt))
+                        if cooldown <= info.duration then
+                            local expiresAt = nowAbs + cooldown
+                            local current = NS.db and NS.db[NS.playerKey] and NS.db[NS.playerKey].cooldowns[info.key]
+                            if not current or math.abs(current - expiresAt) > 60 then
+                                StoreCooldown(info.key, math.floor(expiresAt))
+                            end
                         end
                     end
                 end
@@ -178,9 +182,39 @@ local function AlertReadyCooldowns()
     end
 end
 
+----------------------------------------------------------------------
+-- Cleanup: fix corrupted cooldown data (remaining > max duration)
+----------------------------------------------------------------------
+local function CleanupCooldowns()
+    if not NS.db then return end
+
+    local now = time()
+    local maxDuration = {}
+    for _, info in pairs(TRACKED_SPELLS) do
+        if not maxDuration[info.key] or info.duration > maxDuration[info.key] then
+            maxDuration[info.key] = info.duration
+        end
+    end
+
+    for charKey, charData in pairs(NS.db) do
+        if type(charData) == "table" and charData.cooldowns then
+            for key, expiresAt in pairs(charData.cooldowns) do
+                local max = maxDuration[key]
+                if max and type(expiresAt) == "number" then
+                    local remaining = expiresAt - now
+                    if remaining > max then
+                        charData.cooldowns[key] = nil
+                    end
+                end
+            end
+        end
+    end
+end
+
 -- Scan spellbook after login, then alert for ready cooldowns
 -- 5s delay to ensure spell data is fully loaded
 NS:RegisterCallback("PLAYER_LOGIN", function()
+    CleanupCooldowns()
     C_Timer.After(5, function()
         ScanSpellbook()
         AlertReadyCooldowns()
