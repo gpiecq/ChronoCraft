@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.1
+
+### Fixed
+- Fix corrupted cooldown timers showing impossible values (e.g. 49 days instead of ready)
+- Add sanity checks in spellbook scan and tradeskill scan to reject values exceeding max cooldown duration
+- Add `IsPlayerSpell` check in spellbook scan to only process known spells
+- Auto-cleanup of corrupted cooldown data on login for all characters
+
 ## 1.0.0
 
 - Initial release
